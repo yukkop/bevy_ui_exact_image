@@ -9,10 +9,14 @@ repository = "https://github.com/ickshonpe/bevy_ui_exact_image"
 readme = "README.md"
 description = "Bevy UI image widget with more control over the size of images and their orientation"
 
+[dependencies]
+log = "0.4.20"
+
+# TODO: separate deps from bevy
 [dependencies.bevy]
-version = "0.9"
+version = "0.12.1"
 default_features= false
-features = ["bevy_asset", "render"]
+features = ["bevy_asset", "bevy_render", "bevy_ui"]
 
 [dev-dependencies]
-bevy = "0.9"
+bevy = "0.12.1"

@@ -2,7 +2,8 @@ use bevy::prelude::*;
 use bevy_ui_exact_image::*;
 
 fn spawn_example(mut commands: Commands, assets: Res<AssetServer>) {
-    let node_size = Size::new(Val::Px(128.0), Val::Px(192.0));
+    let node_width = Val::Px(128.0);
+    let node_height = Val::Px(192.0);
     let alignment = ImageAlignment::TopCenter;
     commands.spawn(Camera2dBundle::default());
     commands
@@ -10,8 +11,9 @@ fn spawn_example(mut commands: Commands, assets: Res<AssetServer>) {
             style: Style {
                 justify_content: JustifyContent::SpaceEvenly,
                 align_items: AlignItems::Center,
-                size: Size::new(Val::Percent(100.), Val::Percent(100.)),
-                overflow: Overflow::Hidden,
+                width: node_width,
+                height: node_height,
+                overflow: Overflow::clip(),
                 ..Default::default()
             },
             ..Default::default()
@@ -25,7 +27,8 @@ fn spawn_example(mut commands: Commands, assets: Res<AssetServer>) {
                     ..Default::default()
                 },
                 style: Style {
-                    size: node_size,
+                    width: node_width,
+                    height: node_height,
                     ..Default::default()
                 },
                 background_color: BackgroundColor(Color::RED),
@@ -39,7 +42,8 @@ fn spawn_example(mut commands: Commands, assets: Res<AssetServer>) {
                     ..Default::default()
                 },
                 style: Style {
-                    size: node_size,
+                    width: node_width,
+                    height: node_height,
                     ..Default::default()
                 },
                 background_color: BackgroundColor(Color::RED),
@@ -54,7 +58,8 @@ fn spawn_example(mut commands: Commands, assets: Res<AssetServer>) {
                     ..Default::default()
                 },
                 style: Style {
-                    size: node_size,
+                    width: node_width,
+                    height: node_height,
                     ..Default::default()
                 },
                 background_color: BackgroundColor(Color::RED),
@@ -69,7 +74,8 @@ fn spawn_example(mut commands: Commands, assets: Res<AssetServer>) {
                     ..Default::default()
                 },
                 style: Style {
-                    size: node_size,
+                    width: node_width,
+                    height: node_height,
                     ..Default::default()
                 },
                 background_color: BackgroundColor(Color::RED),
@@ -79,8 +85,9 @@ fn spawn_example(mut commands: Commands, assets: Res<AssetServer>) {
             builder
                 .spawn(NodeBundle {
                     style: Style {
-                        size: node_size,
-                        overflow: Overflow::Hidden,
+                        width: node_width,
+                        height: node_height,
+                        overflow: Overflow::clip(),
                         ..Default::default()
                     },
                     ..Default::default()
@@ -95,7 +102,8 @@ fn spawn_example(mut commands: Commands, assets: Res<AssetServer>) {
                         },
                         style: Style {
                             flex_direction: FlexDirection::Column,
-                            size: node_size,
+                            width: node_width,
+                            height: node_height,
                             ..Default::default()
                         },
                         ..Default::default()
@@ -107,7 +115,7 @@ fn spawn_example(mut commands: Commands, assets: Res<AssetServer>) {
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
-        .add_plugin(ExactImagePlugin)
-        .add_startup_system(spawn_example)
+        .add_plugins(ExactImagePlugin)
+        .add_systems(Startup, spawn_example)
         .run();
 }

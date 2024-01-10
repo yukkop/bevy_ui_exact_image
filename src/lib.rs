@@ -1,10 +1,15 @@
+use bevy::ecs::system::EntityCommands;
+use bevy::log;
 use bevy::prelude::*;
 use bevy::render::Extract;
 use bevy::render::RenderApp;
-use bevy::render::RenderStage;
+use bevy::render::RenderSet;
+use bevy::ui::ContentSize;
 use bevy::ui::ExtractedUiNode;
 use bevy::ui::ExtractedUiNodes;
+use bevy::ui::FixedMeasure;
 use bevy::ui::FocusPolicy;
+use bevy::ui::Measure;
 use bevy::ui::RenderUiSystem;
 use bevy::ui::UiStack;
 use bevy::ui::UiSystem;
@@ -97,8 +102,10 @@ pub struct ExactImageBundle {
     pub global_transform: GlobalTransform,
     /// Describes the visibility properties of the node
     pub visibility: Visibility,
-    /// Algorithmically-computed indication of whether an entity is visible and should be extracted for rendering
-    pub computed_visibility: ComputedVisibility,
+    /// TODO
+    pub view_visibility: ViewVisibility,
+    /// TODO
+    pub inherited_visibility: InheritedVisibility,
     /// Indicates the depth at which the node should appear in the UI
     pub z_index: ZIndex,
 }
@@ -114,7 +121,8 @@ impl Default for ExactImageBundle {
             transform: Default::default(),
             global_transform: Default::default(),
             visibility: Default::default(),
-            computed_visibility: Default::default(),
+            view_visibility: Default::default(),
+            inherited_visibility: Default::default(),
             z_index: Default::default(),
         }
     }
@@ -144,8 +152,10 @@ pub struct ExactAtlasImageBundle {
     pub global_transform: GlobalTransform,
     /// Describes the visibility properties of the node
     pub visibility: Visibility,
-    /// Algorithmically-computed indication of whether an entity is visible and should be extracted for rendering
-    pub computed_visibility: ComputedVisibility,
+    /// TODO
+    pub view_visibility: ViewVisibility,
+    /// TODO
+    pub inherited_visibility: InheritedVisibility,
     /// Indicates the depth at which the node should appear in the UI
     pub z_index: ZIndex,
 }
@@ -161,7 +171,8 @@ impl Default for ExactAtlasImageBundle {
             transform: Default::default(),
             global_transform: Default::default(),
             visibility: Default::default(),
-            computed_visibility: Default::default(),
+            view_visibility: Default::default(),
+            inherited_visibility: Default::default(),
             z_index: Default::default(),
         }
     }
@@ -172,33 +183,31 @@ pub fn exact_image_system(
     mut commands: Commands,
     textures: Res<Assets<Image>>,
     images: Query<(Entity, &ExactImage), (Without<UiImage>, Without<Text>)>,
-    mut calculated_sizes: Query<&mut CalculatedSize>,
+    mut content_sizes: Query<&mut ContentSize>,
 ) {
     for (id, image) in images.iter() {
         if let Some(texture) = textures.get(&image.texture) {
-            match (image.size, calculated_sizes.get_mut(id)) {
+            match (image.size, content_sizes.get_mut(id)) {
                 (
                     ExactSize::AttemptPreserveAspectRatio | ExactSize::ForcePreserveAspectRatio,
-                    Ok(mut calculated_size),
+                    Ok(mut content_size),
                 ) => {
                     let texture_size = texture.size();
-                    let size = Size::new(Val::Px(texture_size.x), Val::Px(texture_size.y));
-                    if size != calculated_size.size {
-                        calculated_size.size = size;
-                    }
+                    let fixed_measure = FixedMeasure { size: Vec2::new(texture_size.x as f32, texture_size.y as f32)};
+                    content_size.set(fixed_measure);
                 }
                 (
                     ExactSize::AttemptPreserveAspectRatio | ExactSize::ForcePreserveAspectRatio,
                     Err(_),
                 ) => {
                     let texture_size = texture.size();
-                    let size = Size::new(Val::Px(texture_size.x), Val::Px(texture_size.y));
-                    commands.entity(id).insert(CalculatedSize { size });
+                    let size = Vec2::new(texture_size.x as f32, texture_size.y as f32);
+                    commands.entity(id).insert(ContentSize::fixed_size(size));
                 }
                 (_, Ok(_)) => {
-                    commands.entity(id).remove::<CalculatedSize>();
+                    commands.entity(id).remove::<ContentSize>();
                 }
-                _ => {}
+                _ => { }
             }
         }
     }
@@ -209,33 +218,31 @@ pub fn exact_atlas_image_system(
     mut commands: Commands,
     atlases: Res<Assets<TextureAtlas>>,
     images: Query<(Entity, &ExactAtlasImage), (Without<UiImage>, Without<Text>)>,
-    mut calculated_sizes: Query<&mut CalculatedSize>,
+    mut content_size: Query<&mut ContentSize>,
 ) {
     for (id, atlas_image) in images.iter() {
         if let Some(texture_atlas) = atlases.get(&atlas_image.atlas) {
-            match (atlas_image.size, calculated_sizes.get_mut(id)) {
+            match (atlas_image.size, content_size.get_mut(id)) {
                 (
                     ExactSize::AttemptPreserveAspectRatio | ExactSize::ForcePreserveAspectRatio,
-                    Ok(mut calculated_size),
+                    Ok(mut content_size),
                 ) => {
                     let texture_size = texture_atlas.textures[atlas_image.index].size();
-                    let size = Size::new(Val::Px(texture_size.x), Val::Px(texture_size.y));
-                    if size != calculated_size.size {
-                        calculated_size.size = size;
-                    }
+                    let fixed_measure = FixedMeasure { size: Vec2::new(texture_size.x as f32, texture_size.y as f32)};
+                    content_size.set(fixed_measure);
                 }
                 (
                     ExactSize::AttemptPreserveAspectRatio | ExactSize::ForcePreserveAspectRatio,
                     Err(_),
                 ) => {
                     let texture_size = texture_atlas.textures[atlas_image.index].size();
-                    let size = Size::new(Val::Px(texture_size.x), Val::Px(texture_size.y));
-                    commands.entity(id).insert(CalculatedSize { size });
+                    let size = Vec2::new(texture_size.x as f32, texture_size.y as f32);
+                    commands.entity(id).insert(ContentSize::fixed_size(size));
                 }
                 (_, Ok(_)) => {
-                    commands.entity(id).remove::<CalculatedSize>();
+                    commands.entity(id).remove::<ContentSize>();
                 }
-                _ => {}
+                _ => { }
             }
         }
     }
@@ -249,19 +256,22 @@ pub fn extract_exact_images(
     ui_stack: Extract<Res<UiStack>>,
     uinode_query: Extract<
         Query<(
+            Entity,
             &Node,
             &Style,
             &ExactImage,
             &GlobalTransform,
-            &ComputedVisibility,
+            &ViewVisibility,
+            &InheritedVisibility,
             Option<&CalculatedClip>,
         )>,
     >,
+    asset_server: Res<AssetServer>,
 ) {
-    let scale_factor = ui_scale.scale as f32;
+    let scale_factor = ***ui_scale;
     for (stack_index, entity) in ui_stack.uinodes.iter().enumerate() {
-        if let Ok((node, style, image, transform, visibility, clip)) = uinode_query.get(*entity) {
-            if !visibility.is_visible() || image.color.a() == 0. || !images.contains(&image.texture)
+        if let Ok((entity, node, style, image, transform, view_visibility, inherited_visibility, clip)) = uinode_query.get(*entity) {
+            if !**inherited_visibility || !**view_visibility || image.color.a() == 0. || !images.contains(&image.texture)
             {
                 continue;
             }
@@ -274,18 +284,22 @@ pub fn extract_exact_images(
                         style.flex_direction,
                         FlexDirection::Column | FlexDirection::ColumnReverse
                     ) {
-                        size.x = size.y / images.get(&image.texture).unwrap().aspect_2d();
+                        size.x = size.y / images.get(&image.texture).unwrap().aspect_ratio();
                     } else {
-                        size.y = size.x * images.get(&image.texture).unwrap().aspect_2d();
+                        size.y = size.x * images.get(&image.texture).unwrap().aspect_ratio();
                     }
                 }
                 ExactSize::Texture => {
-                    size = images.get(&image.texture).unwrap().size() * scale_factor
+                    let uvec = images.get(&image.texture).unwrap().size() * scale_factor as u32;
+                    size = Vec2::new(uvec.x as f32, uvec.y as f32);
                 }
                 ExactSize::Scaled(scale) => {
-                    size = scale * images.get(&image.texture).unwrap().size() * scale_factor
+                    // TODO: to many casts
+                    let scale = UVec2::new(scale.x as u32, scale.y as u32);
+                    let uvec = scale * images.get(&image.texture).unwrap().size() * scale_factor as u32;
+                    size = Vec2::new(uvec.x as f32, uvec.y as f32);
                 }
-                ExactSize::Exactly(custom_size) => size = custom_size * scale_factor,
+                ExactSize::Exactly(custom_size) => size = custom_size * scale_factor as f32,
                 _ => {}
             }
 
@@ -310,18 +324,20 @@ pub fn extract_exact_images(
                 transform *= Mat4::from_rotation_z(rotation);
             }
 
-            extracted_uinodes.uinodes.push(ExtractedUiNode {
-                stack_index,
+            extracted_uinodes.uinodes.insert(entity, ExtractedUiNode {
+                stack_index: stack_index as u32,
                 transform,
-                background_color: image.color,
+                color: image.color,
                 rect: Rect {
                     min: Vec2::ZERO,
                     max: size,
                 },
-                image: image.texture.clone_weak(),
+                image: image.texture.clone_weak().id(),
                 atlas_size: None,
                 clip: clip.map(|clip| clip.clip),
-                scale_factor,
+                flip_x: false,
+                flip_y: false,
+                // scale_factor,
             });
         }
     }
@@ -336,21 +352,23 @@ pub fn extract_exact_atlas_images(
     ui_stack: Extract<Res<UiStack>>,
     uinode_query: Extract<
         Query<(
+            Entity,
             &Node,
             &Style,
             &ExactAtlasImage,
             &GlobalTransform,
-            &ComputedVisibility,
+            &ViewVisibility,
+            &InheritedVisibility,
             Option<&CalculatedClip>,
         )>,
     >,
 ) {
-    let scale_factor = ui_scale.scale as f32;
+    let scale_factor = ***ui_scale;
     for (stack_index, entity) in ui_stack.uinodes.iter().enumerate() {
-        if let Ok((node, style, atlas_image, transform, visibility, clip)) =
+        if let Ok((entity, node, style, atlas_image, transform, view_visibility, inherited_visibility, clip)) =
             uinode_query.get(*entity)
         {
-            if !visibility.is_visible() || atlas_image.color.a() == 0. {
+            if !**inherited_visibility || !**view_visibility || atlas_image.color.a() == 0. {
                 continue;
             }
             if let Some(texture_atlas) = texture_atlases.get(&atlas_image.atlas) {
@@ -374,9 +392,9 @@ pub fn extract_exact_atlas_images(
                             }
                         }
                     }
-                    ExactSize::Texture => size = rect.size() * scale_factor,
-                    ExactSize::Scaled(scale) => size = scale * rect.size() * scale_factor,
-                    ExactSize::Exactly(custom_size) => size = custom_size * scale_factor,
+                    ExactSize::Texture => size = rect.size() * scale_factor as f32,
+                    ExactSize::Scaled(scale) => size = scale * rect.size() * scale_factor as f32,
+                    ExactSize::Exactly(custom_size) => size = custom_size * scale_factor as f32,
                     _ => {}
                 }
 
@@ -402,15 +420,17 @@ pub fn extract_exact_atlas_images(
                 }
                 let scale = size / rect.size();
                 transform *= Mat4::from_scale(scale.extend(1.));
-                extracted_uinodes.uinodes.push(ExtractedUiNode {
-                    stack_index,
+                extracted_uinodes.uinodes.insert(entity, ExtractedUiNode {
+                    stack_index: stack_index as u32,
                     transform,
-                    background_color: atlas_image.color,
+                    color: atlas_image.color,
                     rect,
-                    image,
+                    image: image.id(),
                     atlas_size: Some(texture_atlas.size),
                     clip: clip.map(|clip| clip.clip),
-                    scale_factor,
+                    flip_x: false,  
+                    flip_y: false,
+                    // scale_factor,
                 });
             }
         }
@@ -425,13 +445,13 @@ impl Plugin for ExactImagePlugin {
             .register_type::<ExactAtlasImage>()
             .register_type::<ExactSize>()
             .register_type::<ImageAlignment>()
-            .add_system_to_stage(
-                CoreStage::PostUpdate,
-                exact_image_system.before(UiSystem::Flex),
+            .add_systems(
+                PostUpdate,
+                exact_image_system.before(UiSystem::Layout),
             )
-            .add_system_to_stage(
-                CoreStage::PostUpdate,
-                exact_atlas_image_system.before(UiSystem::Flex),
+            .add_systems(
+                PostUpdate,
+                exact_atlas_image_system.before(UiSystem::Layout),
             );
 
         let render_app = match app.get_sub_app_mut(RenderApp) {
@@ -440,12 +460,12 @@ impl Plugin for ExactImagePlugin {
         };
 
         render_app
-            .add_system_to_stage(
-                RenderStage::Extract,
+            .add_systems(
+                ExtractSchedule,
                 extract_exact_images.after(RenderUiSystem::ExtractNode),
             )
-            .add_system_to_stage(
-                RenderStage::Extract,
+            .add_systems(
+                ExtractSchedule,
                 extract_exact_atlas_images.after(RenderUiSystem::ExtractNode),
             );
     }

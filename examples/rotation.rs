@@ -11,7 +11,8 @@ fn spawn_example(mut commands: Commands, assets: Res<AssetServer>) {
     commands
         .spawn(NodeBundle {
             style: Style {
-                size: Size::new(Val::Percent(100.), Val::Percent(100.)),
+                width: Val::Percent(100.),
+                height: Val::Percent(100.),
                 justify_content: JustifyContent::Center,
                 ..Default::default()
             },
@@ -22,7 +23,8 @@ fn spawn_example(mut commands: Commands, assets: Res<AssetServer>) {
             builder
                 .spawn(NodeBundle {
                     style: Style {
-                        size: Size::new(Val::Px(width), Val::Percent(100.)),
+                        width: Val::Px(width),
+                        height: Val::Percent(100.),
                         flex_wrap: FlexWrap::Wrap,
                         ..Default::default()
                     },
@@ -40,7 +42,8 @@ fn spawn_example(mut commands: Commands, assets: Res<AssetServer>) {
                                 ..Default::default()
                             },
                             style: Style {
-                                size: Size::new(Val::Px(size), Val::Px(size)),
+                                width: Val::Px(size),
+                                height: Val::Px(size),
                                 margin: UiRect::all(Val::Px(margin)),
                                 ..Default::default()
                             },
@@ -63,8 +66,8 @@ fn rotate_images(time: Res<Time>, mut exact_image_query: Query<&mut ExactImage>)
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
-        .add_plugin(ExactImagePlugin)
-        .add_startup_system(spawn_example)
-        .add_system(rotate_images)
+        .add_plugins(ExactImagePlugin)
+        .add_systems(Startup, spawn_example)
+        .add_systems(Update, rotate_images)
         .run();
 }

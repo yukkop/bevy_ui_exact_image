@@ -4,8 +4,8 @@ use bevy_ui_exact_image::prelude::*;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(ExactImagePlugin)
-        .add_startup_system(spawn_example)
+        .add_plugins(ExactImagePlugin)
+        .add_systems(Startup, spawn_example)
         .run();
 }
 
@@ -29,7 +29,8 @@ fn spawn_example(
     commands
         .spawn(NodeBundle {
             style: Style {
-                size: Size::new(Val::Percent(100.), Val::Percent(100.)),
+                width: Val::Px(100.),
+                height: Val::Px(100.),
                 ..Default::default()
             },
             background_color: BackgroundColor(Color::BLACK),
@@ -45,7 +46,8 @@ fn spawn_example(
                     ..Default::default()
                 },
                 style: Style {
-                    size: Size::new(Val::Px(256.), Val::Px(256.)),
+                    width: Val::Px(256.),
+                    height: Val::Px(128.),
                     ..Default::default()
                 },
                 background_color: BackgroundColor(Color::RED),

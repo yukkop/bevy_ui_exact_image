@@ -12,7 +12,8 @@ fn spawn_example(mut commands: Commands, assets: Res<AssetServer>) {
             ..Default::default()
         },
         style: Style {
-            size: Size::new(Val::Px(128.0), Val::Px(128.0)),
+            width: Val::Px(128.),
+            height: Val::Px(128.),
             ..Default::default()
         },
         background_color: BackgroundColor(Color::RED),
@@ -22,19 +23,19 @@ fn spawn_example(mut commands: Commands, assets: Res<AssetServer>) {
 
 fn main() {
     App::new()
-        .insert_resource(UiScale { scale: 2.0 })
+        .insert_resource(UiScale(2.))
         .add_plugins(
             DefaultPlugins
                 .set(ImagePlugin::default_nearest())
                 .set(WindowPlugin {
-                    window: WindowDescriptor {
-                        scale_factor_override: Some(2.0),
-                        ..Default::default()
-                    },
+                    // window: WindowDescriptor {
+                    //     scale_factor_override: Some(2.0),
+                    //     ..Default::default()
+                    // },
                     ..Default::default()
                 }),
         )
-        .add_plugin(ExactImagePlugin)
-        .add_startup_system(spawn_example)
+        .add_plugins(ExactImagePlugin)
+        .add_systems(Startup, spawn_example)
         .run();
 }

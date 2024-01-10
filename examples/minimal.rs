@@ -12,7 +12,8 @@ fn spawn_example(mut commands: Commands, assets: Res<AssetServer>) {
             rotation: None,
         },
         style: Style {
-            size: Size::new(Val::Px(400.0), Val::Px(400.0)),
+            width: Val::Px(400.),
+            height: Val::Px(400.),
             ..Default::default()
         },
         background_color: BackgroundColor(Color::RED),
@@ -22,7 +23,7 @@ fn spawn_example(mut commands: Commands, assets: Res<AssetServer>) {
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
-        .add_plugin(ExactImagePlugin)
-        .add_startup_system(spawn_example)
+        .add_plugins(ExactImagePlugin)
+        .add_systems(Startup, spawn_example)
         .run();
 }

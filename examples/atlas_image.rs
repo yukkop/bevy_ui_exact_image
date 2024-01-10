@@ -3,18 +3,18 @@ use bevy_ui_exact_image::prelude::*;
 
 fn main() {
     App::new()
-        .insert_resource(UiScale { scale: 0.5 })
+        .insert_resource(UiScale(0.5))
         .add_plugins(DefaultPlugins.set(WindowPlugin {
-            window: WindowDescriptor {
-                width: 1380.0 / 2.0,
-                height: 276.0 / 2.0,
-                resizable: false,
-                ..Default::default()
-            },
+            // window: WindowDescriptor {
+            //     width: 1380.0 / 2.0,
+            //     height: 276.0 / 2.0,
+            //     resizable: false,
+            //     ..Default::default()
+            // },
             ..Default::default()
         }))
-        .add_plugin(ExactImagePlugin)
-        .add_startup_system(spawn_example)
+        .add_plugins(ExactImagePlugin)
+        .add_systems(Startup, spawn_example)
         .run();
 }
 
@@ -38,7 +38,8 @@ fn spawn_example(
     commands
         .spawn(NodeBundle {
             style: Style {
-                size: Size::new(Val::Px(1380.), Val::Px(276.)),
+                width: Val::Px(1380.),
+                height: Val::Px(276.),
                 justify_content: JustifyContent::SpaceAround,
                 align_items: AlignItems::Center,
                 ..Default::default()
@@ -55,7 +56,8 @@ fn spawn_example(
                     ..Default::default()
                 },
                 style: Style {
-                    size: Size::new(Val::Px(256.), Val::Px(256.)),
+                    width: Val::Px(256.),
+                    height: Val::Px(256.),
                     ..Default::default()
                 },
                 background_color: BackgroundColor(Color::RED),
@@ -81,7 +83,8 @@ fn spawn_example(
                         rotation: None,
                     },
                     style: Style {
-                        size: Size::new(Val::Px(256.), Val::Px(256.)),
+                        width: Val::Px(256.),
+                        height: Val::Px(256.),
                         ..Default::default()
                     },
                     background_color: BackgroundColor(Color::RED),
